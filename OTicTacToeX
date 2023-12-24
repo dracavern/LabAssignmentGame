@@ -193,6 +193,7 @@ void playGame(Player *player) {
 
     printf("Press Enter to continue...");
     getchar();
+    getchar();
 }
 
 void loadRankingsFromFile() {
@@ -292,6 +293,7 @@ void printExitScreen() {
     printf("                                                 |_____|\n");
     printf("\n");
     printf("Press Enter to continue...");
+    getchar();
     getchar();
 }
 
@@ -401,10 +403,11 @@ void Menu(Player *currentPlayer) {
 	start:
     do {
         printWelcomeScreen();
+        getchar();
         printf("1. Play Tic Tac Toe\n");
         printf("2. View Rankings\n");
         printf("3. Search Rankings\n");
-        printf("3. Exit\n");
+        printf("4. Exit\n");
         printf("Enter your choice: ");
         scanf("%d", &choice);
 
@@ -441,7 +444,7 @@ void Math(){
 	getchar();
 	if (fabs(num - 161.2) < 0.0001){
 		printf("Correct. You got some basic math skills ready.\n");
-		printf("You think it's useful for this game? It's not. Let's continue.'\n");
+		printf("You think it's useful for this game? It's not. Let's continue.\n");
 	}else{
 		printf("Wrong. Try again!\n");
  		goto start;
@@ -451,9 +454,10 @@ void Math(){
 int main() {
     int num;
     loadUsersFromFile();
-    printWelcomeScreen();
     Player currentPlayer;
     int loggedIn = 0;
+    printWelcomeScreen();
+    getchar();
     Math();
     do {
         printf("1. Register\n");
@@ -471,7 +475,7 @@ int main() {
                     loggedIn = 1;   
                 break;
             case 3:
-                printf("You have exit the iconic OTicTacToeX game.\n");
+                printf("You have exitted the iconic OTicTacToeX game.\n");
                 break;
             default:
                 printf("Invalid choice. Please enter a valid option.\n");
