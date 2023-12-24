@@ -1,0 +1,490 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <math.h>
+
+#define MAX_USERS 100
+
+typedef struct {
+    char username[25];
+    char password[25];
+    char board[3][3];
+    char PLAYER;
+    char COMPUTER;
+    int score;
+} Player;
+
+int userCount = 0;
+Player users[MAX_USERS];
+
+void printBoard(char board[3][3]) {
+    printf("\n");
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            printf(" %c ", board[i][j]);
+            if (j < 2) {
+                printf("|");
+            }
+        }
+        printf("\n");
+        if (i < 2) {
+            printf("-----------\n");
+        }
+    }
+}
+
+void playerMove(char* moves, int* moveCount, char board[3][3], char PLAYER) {
+    int move;
+    int row, col;
+
+    while (board[row][col] != ' ') {
+        printf("\nEnter move (1-9): ");
+        scanf("%d", &move);
+
+        row = (move - 1) / 3;
+        col = (move - 1) % 3;
+        if (move < 1 || move > 9) {
+            printf("Invalid move! Enter a number between 1 and 9.\n");
+            continue;
+        }
+
+        if (board[row][col] != ' ') {
+            printf("Invalid move! The cell is already taken.\n");
+        } else {
+            board[row][col] = PLAYER;
+            moves[(*moveCount)++] = PLAYER;
+            break;
+        }
+    }
+}
+
+void sortMoves(char* moves, int moveCount) {
+    for (int i = 0; i < moveCount - 1; i++) {
+        for (int j = 0; j < moveCount - i - 1; j++) {
+            if (moves[j] > moves[j + 1]) {
+                char temp = moves[j];
+                moves[j] = moves[j + 1];
+                moves[j + 1] = temp;
+            }
+        }
+    }
+}
+
+int checkFreeSpaces(char board[3][3]) {
+    int freeSpaces = 0;
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            if (board[i][j] == ' ') {
+                freeSpaces++;
+            }
+        }
+    }
+
+    return freeSpaces;
+}
+
+void computerMove(char board[3][3], char COMPUTER) {
+    srand(time(0));
+    int x, y;
+
+    if (checkFreeSpaces(board) > 0) {
+        do {
+            x = rand() % 3;
+            y = rand() % 3;
+        } while (board[x][y] != ' ');
+
+        board[x][y] = COMPUTER;
+    }
+}
+
+char checkWinner(char board[3][3]) {
+    for (int i = 0; i < 3; i++) {
+        if (board[i][0] == board[i][1] && board[i][0] == board[i][2]) {
+            return board[i][0];
+        }
+    }
+
+    for (int i = 0; i < 3; i++) {
+        if (board[0][i] == board[1][i] && board[0][i] == board[2][i]) {
+            return board[0][i];
+        }
+    }
+
+    if (board[0][0] == board[1][1] && board[0][0] == board[2][2]) {
+        return board[0][0];
+    }
+    if (board[0][2] == board[1][1] && board[0][2] == board[2][0]) {
+        return board[0][2];
+    }
+
+    return ' ';
+}
+
+void saveRankingsToFile() {
+    FILE *file = fopen("rankings.txt", "w");
+    if (file == NULL) {
+        printf("Error opening rankings file.\n");
+        exit(1);
+    }
+
+    for (int i = 0; i < userCount; i++) {
+        fprintf(file, "%s %s %d\n", users[i].username, users[i].password, users[i].score);
+    }
+
+    fclose(file);
+}
+
+void updatePlayerStats(char username[], int score) {
+    for (int i = 0; i < userCount; i++) {
+        if (strcmp(users[i].username, username) == 0) {
+            users[i].score += score;
+            return;
+        }
+    }
+}
+
+void playGame(Player *player) {
+    char moves[9];
+    int moveCount = 0;
+
+    printf("Choose symbol (not \'O\'): ");
+    scanf(" %c", &player->PLAYER);
+    player->COMPUTER = 'O';
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            player->board[i][j] = ' ';
+        }
+    }
+
+    while (1) {
+        printBoard(player->board);
+        playerMove(moves, &moveCount, player->board, player->PLAYER);
+        sortMoves(moves, moveCount);
+
+        if (checkWinner(player->board) != ' '|| checkFreeSpaces(player->board) == 0) {
+            break;
+        }
+
+        computerMove(player->board, player->COMPUTER);
+
+        if (checkWinner(player->board) != ' ') {
+            break;
+        }
+
+        if (checkFreeSpaces(player->board) == 0) {
+            printf("It's a draw!\n");
+            break;
+        }
+    }
+
+    printBoard(player->board);
+
+	if (checkWinner(player->board) != ' ') {
+    printf("We have a winner!\n");
+    printf("Winner: %c\n", checkWinner(player->board));
+    player->score++;
+    updatePlayerStats(player->username, 1);
+ 	saveRankingsToFile();
+	}
+
+
+    printf("Press Enter to continue...");
+    getchar();
+}
+
+void loadRankingsFromFile() {
+    FILE *file = fopen("rankings.txt", "r");
+    if (file == NULL) {
+        printf("Error opening rankings file.\n");
+        exit(1);
+    }
+
+    int count = 0;
+    while (fscanf(file, "%s %s %d\n", users[count].username, users[count].password, &users[count].score) == 3) {
+        count++;
+        if (count >= MAX_USERS) {
+            printf("Maximum number of users reached.\n");
+            break;
+        }
+    }
+
+    fclose(file);
+    userCount = count;
+}
+
+
+
+void binarySearchRankings(char username[]) {
+    int low = 0;
+    int high = userCount - 1;
+    int found = 0;
+
+    while (low <= high) {
+        int mid = (low + high) / 2;
+        int comparisonResult = strcmp(users[mid].username, username);
+
+        if (comparisonResult == 0) {
+            printf("Player found!\n");
+            printf("Username: %s, Score: %d\n", users[mid].username, users[mid].score);
+            found = 1;
+            break;
+        } else if (comparisonResult < 0) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+
+    if (!found) {
+        printf("Player not found.\n");
+    }
+}
+
+void sortUsersByScore() {
+    for (int i = 0; i < userCount - 1; i++) {
+        for (int j = 0; j < userCount - i - 1; j++) {
+            if (users[j].score < users[j + 1].score) {
+                Player temp = users[j];
+                users[j] = users[j + 1];
+                users[j + 1] = temp;
+            }
+        }
+    }
+}
+
+void viewRankings() {
+    loadRankingsFromFile();
+    sortUsersByScore();
+    printf("Rankings:\n");
+    printf("Username  Score\n");
+    for (int i = 0; i < userCount; i++) {
+        printf("%-10s %d\n", users[i].username, users[i].score);
+    }
+}
+
+void displayPlayerInfo(Player *player) {
+    printf("Player: %s\n", player->username);
+    printf("Score: %d\n", player->score);
+}
+
+void printWelcomeScreen() {
+    printf("  ___   _______        _______    ____  _______        _    _\n");
+    printf(" /   \\ |__   __|^ ___ |__   __|__|  __||__   __|  ___ \\ \\  / /\n");
+    printf("|  |  |   | |   _|  _|   | |/ _  | |      | |___ / _ \\ \\ \\/ /\n");
+    printf("|  |  |   | |  | | |_    | | (_| | |__    | | . |  __/ / /\\ \\\n");
+    printf(" \\___/    |_|  |_|___|   |_|___,_|____|   |_|___|\\___|/_/  \\_\\\n");
+    printf("\n");
+    printf("Press Enter to continue...");
+    getchar();
+}
+
+void printExitScreen() {
+    printf(" _____                        _____\n");
+    printf("|  ___|             _        |  ___|   _      _\n");
+    printf("| |___ ___ ___ ___ | | ____  | |_ _   | |___ | |_    __ _ ____  _ ____\n");
+    printf("|  ___|_  |  _| _ \\| |/ _  | |  _| |__| | _ \\| | |  |  | | __ \\| | __ \\\n");
+    printf("| |___ / /| | |  _/| | (_| | | | | | .  |  _/| |  \\/   |  /  \\ |  /  \\ |\n");
+    printf("|_____|___|_|  \\__||_|___,_| |_| |_|____|\\__||_|\\___/| |_|   |_|_|   |_|\n");
+    printf("NIM: 2702260086                                   ___| |\n");
+    printf("                                                 |_____|\n");
+    printf("\n");
+    printf("Press Enter to continue...");
+    getchar();
+}
+
+
+void saveUsersToFile() {
+    FILE *file = fopen("users.txt", "w");
+    if (file == NULL) {
+        printf("Error opening users file.\n");
+        exit(1);
+    }
+
+    for (int i = 0; i < userCount; i++) {
+        fprintf(file, "%s %s %d %d\n", users[i].username, users[i].password, users[i].score);
+    }
+
+    fclose(file);
+}
+
+void loadUsersFromFile() {
+    FILE *file = fopen("users.txt", "r");
+    if (file == NULL) {
+        printf("Error opening users file.\n");
+        return;
+    }
+
+    int count = 0;
+    while (fscanf(file, "%s %s %d %d\n", users[count].username, users[count].password, &users[count].score) == 4) {
+        count++;
+        if (count >= MAX_USERS) {
+            printf("Maximum number of users reached.\n");
+            break;
+        }
+    }
+
+    fclose(file);
+    userCount = count;
+}
+
+int findUserIndexByUsername(char username[]) {
+    for (int i = 0; i < userCount; i++) {
+        if (strcmp(users[i].username, username) == 0) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+void registerUser() {
+    if (userCount >= MAX_USERS) {
+        printf("Maximum number of users reached.\n");
+        return;
+    }
+
+    printf("Enter username: ");
+    scanf("%s", users[userCount].username);
+
+    if (findUserIndexByUsername(users[userCount].username) != -1) {
+        printf("Username already exists. Please choose a different username.\n");
+        return;
+    }
+
+    printf("Enter password: ");
+    scanf("%s", users[userCount].password);
+
+    users[userCount].score = 0;
+    users[userCount].PLAYER = 'X';
+    users[userCount].COMPUTER = 'O';
+
+    userCount++;
+
+    printf("Registration successful!\n");
+
+    saveUsersToFile();
+}
+
+Player loginUser() {
+    char username[25];
+    char password[25];
+
+    printf("Enter username: ");
+    scanf("%s", username);
+
+    int userIndex = findUserIndexByUsername(username);
+    if (userIndex == -1) {
+        printf("User not found.\n");
+        Player notFoundUser;
+        notFoundUser.score = -1;
+        return notFoundUser;
+    }
+
+    printf("Enter password: ");
+    scanf("%s", password);
+
+    if (strcmp(users[userIndex].password, password) == 0) {
+        printf("Login successful!\n");
+        return users[userIndex];
+    } else {
+        printf("Login failed. Incorrect password.\n");
+        Player wrongPasswordUser;
+        wrongPasswordUser.score = -1;
+        return wrongPasswordUser;
+    }
+}
+
+void Menu(Player *currentPlayer) {
+    int choice;
+	start:
+    do {
+        printWelcomeScreen();
+        printf("1. Play Tic Tac Toe\n");
+        printf("2. View Rankings\n");
+        printf("3. Search Rankings\n");
+        printf("3. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                playGame(currentPlayer);
+                break;
+            case 2:
+                viewRankings();
+                break;
+            case 3:
+                char searchUsername[25];
+                printf("Enter username to search: ");
+                scanf("%s", searchUsername);
+                binarySearchRankings(searchUsername);
+                break;
+            case 4:
+            	printf("You're too good.\n");
+            	break;
+            default:
+                printf("Invalid choice. Please enter a valid option.\n");
+        		goto start;
+		}
+    } while (choice != 4);
+}
+
+void Math(){
+	float num = 0;
+	start:
+    printf("\n");
+    printf("Before we start, solve this equation!\n");
+	printf("54.2 + 107.0 = ");
+	scanf("%f", &num);
+	getchar();
+	if (fabs(num - 161.2) < 0.0001){
+		printf("Correct. You got some basic math skills ready.\n");
+		printf("You think it's useful for this game? It's not. Let's continue.'\n");
+	}else{
+		printf("Wrong. Try again!\n");
+ 		goto start;
+	}
+}
+
+int main() {
+    int num;
+    loadUsersFromFile();
+    printWelcomeScreen();
+    Player currentPlayer;
+    int loggedIn = 0;
+    Math();
+    do {
+        printf("1. Register\n");
+        printf("2. Login\n");
+        printf("3. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &num);
+
+        switch (num) {
+            case 1:
+                registerUser();
+                break;
+            case 2:
+                currentPlayer = loginUser();
+                    loggedIn = 1;   
+                break;
+            case 3:
+                printf("You have exit the iconic OTicTacToeX game.\n");
+                break;
+            default:
+                printf("Invalid choice. Please enter a valid option.\n");
+                break;
+        }
+
+        if (loggedIn) {
+            Menu(&currentPlayer);
+            loggedIn = 0;
+        }
+    } while (num != 3);
+	
+    printExitScreen();
+
+    return 0;
+}
